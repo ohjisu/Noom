@@ -1,5 +1,7 @@
 const socket = io();
 
+
+// Media Code **********************************************************************************************************
 const myFace = document.getElementById("myFace");
 const muteBtn = document.getElementById("mute");
 const cameraBtn = document.getElementById("camera");
@@ -8,11 +10,16 @@ const camerasSelect = document.getElementById("cameras");
 let myStream;
 let muted = false;
 let cameraOff = false;
+let roomName;
+
+const call     = document.getElementById("call");
+call.hidden = true;
 
 async function getCameras() {
     try {
         const devices = await navigator.mediaDevices.enumerateDevices();
-        const cameras = devices.filter((device)=> {device.kind==="videoinput"});
+        const cameras = devices.filter((device)=> device.kind==="videoinput");
+
         const currentCamera = myStream.getVideoTracks()[0];
         cameras.forEach((camera)=>{
             const option = document.createElement("option");
@@ -47,6 +54,7 @@ async function getMedia(deviceId) {
         );
         myFace.srcObject = myStream;
         if(!deviceId) {
+            console.log("getCameras");
             await getCameras();
         }
     } catch(e) {
@@ -54,7 +62,7 @@ async function getMedia(deviceId) {
     }
 }
 
-getMedia();
+
 
 function handleMuteClick() {
     myStream.getAudioTracks().forEach((track)=>{track.enabled = !track.enabled});
@@ -84,3 +92,33 @@ async function handleCameraChange() {
 muteBtn.addEventListener("click", handleMuteClick);
 cameraBtn.addEventListener("click", handleCameraClick);
 camerasSelect.addEventListener("input", handleCameraChange);
+
+
+
+
+// Welcome Form (Join a room) ******************************************************************************************
+const welcome  = document.getElementById("welcome");
+const welcomeForm = welcome.querySelector("form");
+
+function startMedia() {
+    welcome.hidden = true;
+    call.hidden = false;
+    getMedia();
+}
+
+function handleWelcomeSubmit(event) {
+    event.preventDefault();
+    const input = welcomeForm.querySelector("input");
+    const value = input.value;
+    socket.emit("join_room", value, startMedia);
+    roomName = value;
+    input.value = "";
+}
+
+welcomeForm.addEventListener("submit", handleWelcomeSubmit);
+
+// Socket code *********************************************************************************************************
+
+socket.on("welcome", ()=> {
+    console.log("someone joined");
+});
