@@ -47,3 +47,4 @@ httpServer.listen(5000, handleListen);
 
 // Adapter : 다른 서버들 사이에서 실시간으로 어플리케이션을 동기화. 서버의 메모리에서 Adapter를 사용.
 // 누가 접속중인지, room 개수, 등을 알려줌
+

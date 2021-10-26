@@ -89,6 +89,13 @@ function handleCameraClick() {
 
 async function handleCameraChange() {
     await getMedia(camerasSelect.value);
+
+    // 카메라 변경 후 연결 끊기는 부분 수정
+    if(myPeerConnection) {
+        const videoTrack = myStream.getVideoTracks()[0]
+        const videoSender = myPeerConnection.getSenders().find(sender=>sender.track.kind==="video");
+        await videoSender.replaceTrack(videoTrack);
+    }
 }
 
 muteBtn.addEventListener("click", handleMuteClick);
@@ -157,7 +164,22 @@ socket.on("ice", ice=> {
 // WebRTC code *********************************************************************************************************
 
 function makeConnection() {
-    myPeerConnection = new RTCPeerConnection(); // create peer-to-peer connection
+    // Todo: STUN Server 만들어야함
+    // STUN Server : 컴퓨터가 공용 IP를 찾게 해준다.
+    // 어떤 것을 request 했을 때 인터넷에서 네가 누구인지를 알려주는 서버
+    myPeerConnection = new RTCPeerConnection({
+            iceServers: [
+                {
+                    urls: [
+                        "stun.l.google.com:19302",
+                        "stun1.l.google.com:19302",
+                        "stun2.l.google.com:19302",
+                        "stun3.l.google.com:19302",
+                        "stun4.l.google.com:19302",
+                    ]
+                }
+            ]
+    }); // create peer-to-peer connection
     myPeerConnection.addEventListener("icecandidate", handleIce);   // (11) Peer A: Event Listener("icecandidate")
     myPeerConnection.addEventListener("addstream", handleAddStream);
 
@@ -165,6 +187,8 @@ function makeConnection() {
     myStream.getTracks().forEach((track)=> {
         myPeerConnection.addTrack(track, myStream);     // (2) Peer A : addTrack(addStream)
     });
+
+    // createDataChannel() <- images, file, text, game update packets.. 전송가능
 }
 
 function handleIce(data) {
