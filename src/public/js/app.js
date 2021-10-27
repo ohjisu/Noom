@@ -12,7 +12,7 @@ let muted = false;
 let cameraOff = false;
 let roomName;
 let myPeerConnection;
-
+let myDataChannel;
 
 const call     = document.getElementById("call");
 call.hidden = true;
@@ -134,13 +134,33 @@ welcomeForm.addEventListener("submit", handleWelcomeSubmit);
 // Socket code *********************************************************************************************************
 
 socket.on("welcome", async ()=> {
+    // 1. offer를 보내는 쪽이 data channel의 주체가 되어야함
+    // 2. offer를 만들기 전에 data channel을 생성해야함
+    // createDataChannel() <- images, file, text, game update packets.. 전송가능
+    myDataChannel = myPeerConnection.createDataChannel("chat");
+
+
+    myDataChannel.addEventListener("message", (event)=> {
+        console.log(event.data);
+    });
+    console.log("made data channel");
+    // Peer A : made data channel
+
     const offer = await myPeerConnection.createOffer(); // (3) Peer A : createOffer
     myPeerConnection.setLocalDescription(offer);        // (4) Peer A : setLocalDescription
     console.log("send the offer");
     socket.emit("offer", offer, roomName);              // Peer A -> Server
+
+
 });
 
 socket.on("offer", async (offer)=> {
+    // 3. offer를 받는 쪽에서 새로운 data channel을 추가하고 이벤트 리스너를 추가해야함
+    myPeerConnection.addEventListener("datachannel", (event)=> {
+        myDataChannel = event.channel;
+        myDataChannel.addEventListener("message", (event)=> {console.log(event.data)});
+    });
+
     console.log("received the offer");
     // Peer B : received Peer A's offer
     myPeerConnection.setRemoteDescription(offer);           // (5) Peer B : setRemoteDescription
@@ -188,7 +208,6 @@ function makeConnection() {
         myPeerConnection.addTrack(track, myStream);     // (2) Peer A : addTrack(addStream)
     });
 
-    // createDataChannel() <- images, file, text, game update packets.. 전송가능
 }
 
 function handleIce(data) {
@@ -200,3 +219,10 @@ function handleAddStream(data) {
     const peerFace = document.getElementById("peerFace");
     peerFace.srcObject = data.stream;
 }
+
+
+/*
+* Improve the CSS
+* Make a Chat using Data Channels
+* When a peer leaves the room, remove the stream.
+* */
